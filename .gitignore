@@ -1,0 +1,12 @@
+*.iml
+.gradle/
+/local.properties
+.idea/
+.DS_Store
+build/
+/captures
+.externalNativeBuild
+.cxx
+# NOTE: pirateship-signing.keystore IS committed on purpose — every build must use the SAME
+# key so sideloaded updates install in place. It's a throwaway self-signed key (storepass
+# "android"), not a secret.
