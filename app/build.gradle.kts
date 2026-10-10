@@ -57,6 +57,9 @@ android {
 }
 
 dependencies {
-    // Intentionally no androidx here (it would force minSdk 21 and lose KitKat). Framework
-    // Activity + WebView only. libVLC 3.3.5 (minSdk 17) is added at the player step.
+    // Intentionally no appcompat/webkit androidx (they force minSdk 21 and lose KitKat).
+    // libVLC 3.x = minSdk 17 → KitKat-safe. The universal player: bundles its own decoders, so it
+    // software-decodes almost anything (MKV / HEVC 10-bit / AV1 + AC3/EAC3/DTS + ASS/PGS subs) and
+    // uses MediaCodec HW decode when the head unit's chip exposes it.
+    implementation("org.videolan.android:libvlc-all:3.3.5")
 }

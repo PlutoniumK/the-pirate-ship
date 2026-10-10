@@ -94,12 +94,12 @@ class MainActivity : Activity() {
 
     // ---- car_* native actions ----
     fun onCarPlay(json: String) {
-        // 2f will launch the bundled libVLC player here. For now, resolve the URL + acknowledge.
-        val url = try { JSONObject(json).optString("url", "") } catch (e: Exception) { "" }
+        val o = try { JSONObject(json) } catch (e: Exception) { JSONObject() }
+        val url = o.optString("url", "")
+        val title = o.optString("title", "")
         val playable = rewriteLoopback(url)
         if (playable.isBlank()) { toast("Nothing to play"); return }
-        toast("Playing on the car…")
-        // TODO(2f): startActivity(PlayerActivity.intent(this, playable, title, …))
+        PlayerActivity.start(this, playable, title)
     }
 
     fun openExternal(url: String) {

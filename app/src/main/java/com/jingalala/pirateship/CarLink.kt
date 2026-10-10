@@ -36,7 +36,8 @@ object CarLink {
     fun configured() = host.isNotBlank() && token.isNotBlank()
     fun base() = "http://$host:$PORT"
     fun uiUrl() = base() + "/ui/?t=" + enc(token)
-    fun mediaUrl(loopback: String) = base() + "/media?u=" + enc(loopback)
+    // token in the query so a plain player (libVLC) can fetch it without custom headers.
+    fun mediaUrl(loopback: String) = base() + "/media?u=" + enc(loopback) + "&token=" + enc(token)
     fun pingUrl(h: String) = "http://${h.trim()}:$PORT/ping"
 
     private fun enc(s: String) = try { URLEncoder.encode(s, "UTF-8") } catch (e: Exception) { s }
