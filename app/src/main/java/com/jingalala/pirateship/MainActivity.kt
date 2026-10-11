@@ -53,6 +53,24 @@ class MainActivity : Activity() {
         goImmersive()
 
         if (CarLink.configured()) loadPhoneUi() else loadSetup()
+
+        // Background self-update check (its OWN channel — never The Cap's app_version).
+        Thread {
+            val info = CarUpdater.check()
+            if (info != null) runOnUiThread { promptUpdate(info) }
+        }.start()
+    }
+
+    private fun promptUpdate(info: CarUpdater.Info) {
+        try {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Update available")
+                .setMessage("A newer Pirate Ship" + (if (info.name.isNotBlank()) " (${info.name})" else "") +
+                        " is ready to install." + (if (info.notes.isNotBlank()) "\n\n${info.notes}" else ""))
+                .setPositiveButton("Install") { _, _ -> Thread { CarUpdater.downloadAndInstall(this, info.apkUrl) }.start() }
+                .setNegativeButton("Later", null)
+                .show()
+        } catch (e: Exception) { /* ignore */ }
     }
 
     // ---- loading ----

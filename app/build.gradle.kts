@@ -62,4 +62,7 @@ dependencies {
     // software-decodes almost anything (MKV / HEVC 10-bit / AV1 + AC3/EAC3/DTS + ASS/PGS subs) and
     // uses MediaCodec HW decode when the head unit's chip exposes it.
     implementation("org.videolan.android:libvlc-all:3.3.5")
+    // androidx.core 1.13.1 keeps minSdk 19 (unlike appcompat) — needed only for FileProvider,
+    // so the self-updater can hand the downloaded APK to the installer on API 24+.
+    implementation("androidx.core:core:1.13.1")
 }
