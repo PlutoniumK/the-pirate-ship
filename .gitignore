@@ -5,6 +5,8 @@
 .DS_Store
 build/
 /captures
+# staged release APK lives in GitHub Releases, not git
+/ThePirateShip.apk
 .externalNativeBuild
 .cxx
 # NOTE: pirateship-signing.keystore IS committed on purpose — every build must use the SAME
