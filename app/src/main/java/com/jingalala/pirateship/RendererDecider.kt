@@ -1,26 +1,26 @@
 package com.jingalala.pirateship
 
 import android.content.Context
-import android.os.Build
 import android.webkit.WebView
 
 /**
- * Picks the best renderer for THIS head unit. The phone always serves the same modern Cap UI; the
- * only question is which engine on the car can render it well:
- *   - SYSTEM_WEBVIEW:  the device's own WebView is modern enough (Chrome >= MIN_CHROME) → use it (cheap, no bundle).
- *   - GECKOVIEW:       WebView too old/stale but device is Android 5.0+ → bundled modern engine (full premium UI).
- *   - SYSTEM_FALLBACK: last resort (very old, no GeckoView available) → best-effort system WebView.
+ * The phone always serves the same modern Cap UI; the only question is whether THIS head unit's
+ * WebView can render it well. We detect the system WebView's Chrome version and, if it's too old,
+ * nudge the user to update "Android System WebView" (an updatable app on Android 7+). This gives a
+ * real modern Chromium engine with NO changes to our bridge/interception, and the app still
+ * proceeds best-effort if they skip it.
+ *
+ * (GeckoView was evaluated and rejected: as of 2025 it requires Android 8.0+, so it can't run on
+ * the old Android 5/6/7 units this was meant to rescue, and it would force an async bridge rewrite
+ * + ~150 MB of binary. The update-nudge reaches more devices for far less.)
  *
  * Must be queried on the main thread (it briefly constructs a WebView to read its UA string).
  */
 object RendererDecider {
     // Chrome major the modern Cap UI needs to render well. app.js only PARSES from Chrome 80
-    // (optional chaining), and its newest CSS effects want ~111; 90 is a pragmatic "runs and looks
-    // right" floor. Below it on a stale WebView we switch to the bundled GeckoView, which is always
-    // modern. Tunable.
+    // (optional chaining); its newest CSS effects want ~111. 90 is a pragmatic "runs and looks
+    // right" floor — below it (on a real but stale WebView) we nudge an update. Tunable.
     const val MIN_CHROME = 90
-
-    enum class Renderer { SYSTEM_WEBVIEW, GECKOVIEW, SYSTEM_FALLBACK }
 
     @Volatile private var cachedChrome = -1
 
@@ -34,10 +34,7 @@ object RendererDecider {
         return cachedChrome
     }
 
-    fun pick(ctx: Context): Renderer {
-        val chrome = systemChromeMajor(ctx)
-        if (chrome >= MIN_CHROME) return Renderer.SYSTEM_WEBVIEW
-        if (Build.VERSION.SDK_INT >= 21) return Renderer.GECKOVIEW
-        return Renderer.SYSTEM_FALLBACK
-    }
+    /** True when the device HAS a WebView but it's too old for the modern UI → nudge an update.
+     *  Unknown (0) is treated as fine, so we never nag when we can't tell. */
+    fun webViewOutdated(ctx: Context): Boolean = systemChromeMajor(ctx) in 1 until MIN_CHROME
 }

@@ -54,6 +54,9 @@ class MainActivity : Activity() {
 
         if (CarLink.configured()) loadPhoneUi() else loadSetup()
 
+        // If the car's WebView is too old for the modern UI, nudge an update (non-blocking).
+        if (RendererDecider.webViewOutdated(this)) nudgeWebViewUpdate()
+
         // Background self-update check (its OWN channel — never The Cap's app_version).
         Thread {
             val info = CarUpdater.check()
@@ -71,6 +74,26 @@ class MainActivity : Activity() {
                 .setNegativeButton("Later", null)
                 .show()
         } catch (e: Exception) { /* ignore */ }
+    }
+
+    private fun nudgeWebViewUpdate() {
+        try {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Update for the best experience")
+                .setMessage("Your car's web engine is out of date, so some things may not look right. Updating Android System WebView fixes it.")
+                .setPositiveButton("Update") { _, _ -> openWebViewUpdate() }
+                .setNegativeButton("Continue", null)
+                .show()
+        } catch (e: Exception) { /* ignore */ }
+    }
+
+    private fun openWebViewUpdate() {
+        val pkg = "com.google.android.webview"
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (e: Exception) {
+            try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+        }
     }
 
     // ---- loading ----
