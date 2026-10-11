@@ -13,7 +13,11 @@ class PirateBridge(private val act: MainActivity) {
     @JavascriptInterface
     fun gateway(): String = CarLink.gatewayIp(act)
 
-    /** Setup page: the user confirmed phone IP + pairing code. */
+    /** Setup page: one-tap — auto-find the phone + grab the token during its pairing window. */
+    @JavascriptInterface
+    fun findAndConnect() { act.runOnUiThread { act.onFindAndConnect() } }
+
+    /** Setup page: the user confirmed phone IP + pairing code (manual fallback). */
     @JavascriptInterface
     fun connect(host: String, token: String) { act.runOnUiThread { act.onConnectRequested(host, token) } }
 

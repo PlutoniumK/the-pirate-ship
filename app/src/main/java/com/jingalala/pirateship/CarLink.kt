@@ -2,6 +2,9 @@ package com.jingalala.pirateship
 
 import android.content.Context
 import android.net.wifi.WifiManager
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import java.net.URLEncoder
 
 /**
@@ -50,5 +53,65 @@ object CarLink {
             val g = wm.dhcpInfo?.gateway ?: 0
             if (g == 0) "" else "${g and 0xff}.${(g shr 8) and 0xff}.${(g shr 16) and 0xff}.${(g shr 24) and 0xff}"
         } catch (e: Exception) { "" }
+    }
+
+    /** Accept a pasted full URL or bare IP — strip scheme/port/path down to just the host. */
+    fun normalizeHost(input: String): String {
+        var s = input.trim()
+        if (s.startsWith("http://")) s = s.substring(7)
+        if (s.startsWith("https://")) s = s.substring(8)
+        return s.substringBefore("/").substringBefore(":").trim()
+    }
+
+    private fun localIp(ctx: Context): String {
+        return try {
+            val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            @Suppress("DEPRECATION")
+            val ip = wm.connectionInfo?.ipAddress ?: 0
+            if (ip == 0) "" else "${ip and 0xff}.${(ip shr 8) and 0xff}.${(ip shr 16) and 0xff}.${(ip shr 24) and 0xff}"
+        } catch (e: Exception) { "" }
+    }
+
+    /** Is a Cap Car Host answering at this address? */
+    fun isHost(host: String, timeoutMs: Int = 700): Boolean {
+        return try {
+            val c = (URL(pingUrl(host)).openConnection() as HttpURLConnection)
+            c.connectTimeout = timeoutMs; c.readTimeout = timeoutMs; c.connect()
+            val ok = c.responseCode == 200 &&
+                c.inputStream.bufferedReader().use { it.readText() }.contains("\"app\":\"thecap\"")
+            c.disconnect(); ok
+        } catch (e: Exception) { false }
+    }
+
+    /** Find the phone's Car Host on the LAN: DHCP gateway first, then a parallel /24 subnet sweep.
+     *  Works whether we're on the phone's hotspot OR a shared router. Call off the main thread. */
+    fun discover(ctx: Context): String? {
+        gatewayIp(ctx).takeIf { it.isNotBlank() }?.let { if (isHost(it)) return it }
+        val mine = localIp(ctx); if (mine.isBlank()) return null
+        val prefix = mine.substringBeforeLast('.')
+        val found = java.util.concurrent.atomic.AtomicReference<String?>(null)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(48)
+        for (i in 1..254) {
+            val host = "$prefix.$i"
+            if (host == mine) continue
+            pool.submit { if (found.get() == null && isHost(host, 600)) found.compareAndSet(null, host) }
+        }
+        pool.shutdown()
+        try { pool.awaitTermination(9, java.util.concurrent.TimeUnit.SECONDS) } catch (_: Exception) {}
+        pool.shutdownNow()
+        return found.get()
+    }
+
+    /** Ask the phone for the token — succeeds only while the user has a pairing window open. */
+    fun requestPair(host: String): String? {
+        return try {
+            val c = (URL("http://${host.trim()}:$PORT/pair").openConnection() as HttpURLConnection)
+            c.connectTimeout = 4000; c.readTimeout = 4000; c.connect()
+            if (c.responseCode != 200) { c.disconnect(); return null }
+            val body = c.inputStream.bufferedReader().use { it.readText() }
+            c.disconnect()
+            val j = JSONObject(body)
+            if (j.optBoolean("ok", false)) j.optString("token", "").takeIf { it.isNotBlank() } else null
+        } catch (e: Exception) { null }
     }
 }

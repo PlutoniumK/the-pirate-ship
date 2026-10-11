@@ -105,7 +105,7 @@ class MainActivity : Activity() {
 
     /** From the setup page: verify the phone answers, then save + load, else show an error. */
     fun onConnectRequested(host: String, token: String) {
-        val h = host.trim(); val t = token.trim()
+        val h = CarLink.normalizeHost(host); val t = token.trim()
         if (h.isEmpty() || t.isEmpty()) { psError("Enter the phone address and the pairing code."); return }
         Thread {
             val ok = pingPhone(h, t)
@@ -131,6 +131,37 @@ class MainActivity : Activity() {
     private fun psError(msg: String) {
         val safe = msg.replace("\\", "\\\\").replace("'", "\\'")
         web.evaluateJavascript("window.psError && window.psError('$safe')", null)
+    }
+
+    private fun psStatus(msg: String) {
+        val safe = msg.replace("\\", "\\\\").replace("'", "\\'")
+        web.evaluateJavascript("window.psStatus && window.psStatus('$safe')", null)
+    }
+
+    /** One-tap: auto-find the phone on the LAN, then grab the token during its pairing window. */
+    fun onFindAndConnect() {
+        psStatus("Looking for your phone…")
+        Thread {
+            val host = CarLink.discover(this)
+            if (host == null) {
+                runOnUiThread { psError("Couldn't find your phone. Make sure Car Mode is on and the car is on the same Wi-Fi/hotspot.") }
+                return@Thread
+            }
+            runOnUiThread { psStatus("Found it. On the phone, open Car Mode and tap “Pair a new car”…") }
+            var token: String? = null
+            val deadline = System.currentTimeMillis() + 90_000L
+            while (System.currentTimeMillis() < deadline) {
+                token = CarLink.requestPair(host)
+                if (token != null) break
+                try { Thread.sleep(2000) } catch (_: Exception) {}
+            }
+            if (token != null) {
+                CarLink.save(this, host, token)
+                runOnUiThread { loadPhoneUi() }
+            } else {
+                runOnUiThread { psError("Didn't get the OK from your phone. On the phone tap “Pair a new car”, then try again.") }
+            }
+        }.start()
     }
 
     // ---- car_* native actions ----
@@ -230,42 +261,48 @@ class MainActivity : Activity() {
   html,body{height:100%;margin:0}
   body{background:#160d2c;color:#eae3ff;font-family:'Segoe UI',Roboto,sans-serif;
        display:flex;align-items:center;justify-content:center}
-  .card{width:92%;max-width:520px;background:rgba(40,28,74,.7);border:1px solid rgba(246,198,81,.35);
-        border-radius:18px;padding:22px 24px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
-  .hat{font-size:40px;text-align:center}
-  h1{color:#f6c651;font-size:22px;font-weight:800;text-align:center;margin:6px 0 2px}
-  p.sub{color:#a99fd0;font-size:13px;text-align:center;margin:0 0 16px}
+  .card{width:92%;max-width:540px;background:rgba(40,28,74,.72);border:1px solid rgba(246,198,81,.35);
+        border-radius:20px;padding:26px 26px;box-shadow:0 10px 36px rgba(0,0,0,.45);text-align:center}
+  .hat{font-size:46px}
+  h1{color:#f6c651;font-size:23px;font-weight:800;margin:8px 0 2px}
+  p.sub{color:#a99fd0;font-size:13px;margin:0 0 18px}
+  button.primary{width:100%;background:linear-gradient(180deg,#ffe09a,#f6c651);color:#2a1850;font-weight:800;
+         border:none;border-radius:14px;padding:16px;font-size:17px}
+  .status{color:#ffe09a;font-size:14px;margin-top:14px;min-height:18px}
+  .err{color:#ff8a8a;font-size:13px;margin-top:8px;min-height:16px}
+  details{margin-top:16px;text-align:left}
+  summary{color:#a99fd0;font-size:13px;cursor:pointer;text-align:center}
   label{display:block;color:#a99fd0;font-size:12px;margin:12px 0 4px}
   input{width:100%;box-sizing:border-box;background:rgba(20,14,40,.8);border:1px solid rgba(246,198,81,.3);
         border-radius:11px;padding:11px 12px;font-size:16px;color:#eae3ff}
-  button{width:100%;margin-top:18px;background:#f6c651;color:#2a1850;font-weight:800;border:none;
-         border-radius:12px;padding:13px;font-size:15px}
-  .err{color:#ff8a8a;font-size:13px;margin-top:12px;min-height:16px;text-align:center}
-  .hint{color:#8f85b8;font-size:12px;margin-top:14px;line-height:1.5}
+  button.ghost{width:100%;margin-top:14px;background:rgba(255,255,255,.08);color:#eae3ff;
+         border:1px solid rgba(246,198,81,.35);border-radius:12px;padding:12px;font-size:14px}
+  .hint{color:#8f85b8;font-size:12px;margin-top:16px;line-height:1.5}
 </style></head>
 <body><div class="card">
   <div class="hat">&#9875;</div>
   <h1>Connect to your phone</h1>
-  <p class="sub">On your phone: The Cap &rarr; Settings &rarr; Car Mode &rarr; Turn on</p>
-  <label>Phone address</label>
-  <input id="ip" type="text" inputmode="decimal" value="$prefHost" placeholder="192.168.43.1">
-  <label>Pairing code</label>
-  <input id="code" type="text" value="${CarLink.token}" placeholder="shown on the phone">
-  <button id="go">Connect</button>
+  <p class="sub">On your phone: The Cap &rarr; Settings &rarr; Car Mode</p>
+  <button id="find" class="primary">Find &amp; connect</button>
+  <div class="status" id="st"></div>
   <div class="err" id="err"></div>
-  <div class="hint">Make sure the car's Wi-Fi is joined to the phone's hotspot first. After this, the car reconnects on its own.</div>
+  <details>
+    <summary>Enter manually instead</summary>
+    <label>Phone address</label>
+    <input id="ip" type="text" inputmode="decimal" value="$prefHost" placeholder="192.168.1.4">
+    <label>Pairing code</label>
+    <input id="code" type="text" value="${CarLink.token}" placeholder="shown on the phone">
+    <button id="go" class="ghost">Connect manually</button>
+  </details>
+  <div class="hint">Tip: make sure the car is on the same Wi-Fi/hotspot as the phone, then tap <b>Find &amp; connect</b> and, on the phone, tap <b>Pair a new car</b> — no codes.</div>
 </div>
 <script>
-  (function(){
-    try{ if(window.PirateNative&&PirateNative.gateway){ var g=PirateNative.gateway(); if(g&&!document.getElementById('ip').value) document.getElementById('ip').value=g; } }catch(e){}
-    window.psError=function(m){ document.getElementById('err').textContent=m||''; var b=document.getElementById('go'); if(b){b.disabled=false;b.textContent='Connect';} };
-    document.getElementById('go').onclick=function(){
-      var ip=document.getElementById('ip').value, code=document.getElementById('code').value;
-      document.getElementById('err').textContent='';
-      this.disabled=true; this.textContent='Connecting…';
-      try{ PirateNative.connect(ip, code); }catch(e){ window.psError('Setup error'); }
-    };
-  })();
+  function resetBtns(){var f=document.getElementById('find');if(f){f.disabled=false;f.textContent='Find & connect';}var g=document.getElementById('go');if(g){g.disabled=false;g.textContent='Connect manually';}}
+  window.psError=function(m){document.getElementById('err').textContent=m||'';document.getElementById('st').textContent='';resetBtns();};
+  window.psStatus=function(m){document.getElementById('st').textContent=m||'';document.getElementById('err').textContent='';};
+  (function(){try{if(window.PirateNative&&PirateNative.gateway){var g=PirateNative.gateway();var ipf=document.getElementById('ip');if(g&&ipf&&!ipf.value)ipf.value=g;}}catch(e){}})();
+  document.getElementById('find').onclick=function(){this.disabled=true;this.textContent='Searching…';document.getElementById('err').textContent='';try{PirateNative.findAndConnect();}catch(e){window.psError('Setup error');}};
+  document.getElementById('go').onclick=function(){var ip=document.getElementById('ip').value,code=document.getElementById('code').value;document.getElementById('err').textContent='';this.disabled=true;this.textContent='Connecting…';try{PirateNative.connect(ip,code);}catch(e){window.psError('Setup error');}};
 </script>
 </body></html>
 """
