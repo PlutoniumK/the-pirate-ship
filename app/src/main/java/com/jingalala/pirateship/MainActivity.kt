@@ -57,12 +57,20 @@ class MainActivity : Activity() {
         // If the car's WebView is too old for the modern UI, nudge an update (non-blocking).
         if (RendererDecider.webViewOutdated(this)) nudgeWebViewUpdate()
 
-        // Background self-update check (its OWN channel — never The Cap's app_version).
+        // Background self-update check (its OWN channel — never The Cap's app_version). It runs OFF
+        // the UI thread so it can NEVER make the car "hang on checking", and it is purely OPTIONAL:
+        // an update is only ever OFFERED, never forced, and once the user taps "Later" for a given
+        // version we never ask again for that version (so it never feels force-pushed). The car always
+        // keeps playing the library on whatever version it's on.
         Thread {
             val info = CarUpdater.check()
-            if (info != null) runOnUiThread { promptUpdate(info) }
+            if (info != null && info.code > skippedUpdateCode()) runOnUiThread { promptUpdate(info) }
         }.start()
     }
+
+    private fun prefs() = getSharedPreferences("pirate", MODE_PRIVATE)
+    private fun skippedUpdateCode(): Int = try { prefs().getInt("skip_update_code", 0) } catch (e: Exception) { 0 }
+    private fun setSkippedUpdateCode(code: Int) { try { prefs().edit().putInt("skip_update_code", code).apply() } catch (e: Exception) {} }
 
     private fun promptUpdate(info: CarUpdater.Info) {
         try {
@@ -71,7 +79,9 @@ class MainActivity : Activity() {
                 .setMessage("A newer Pirate Ship" + (if (info.name.isNotBlank()) " (${info.name})" else "") +
                         " is ready to install." + (if (info.notes.isNotBlank()) "\n\n${info.notes}" else ""))
                 .setPositiveButton("Install") { _, _ -> Thread { CarUpdater.downloadAndInstall(this, info.apkUrl) }.start() }
-                .setNegativeButton("Later", null)
+                // "Later" REMEMBERS this version so we don't nag again every launch (no force-push feel).
+                .setNegativeButton("Later") { _, _ -> setSkippedUpdateCode(info.code) }
+                .setCancelable(true)
                 .show()
         } catch (e: Exception) { /* ignore */ }
     }
