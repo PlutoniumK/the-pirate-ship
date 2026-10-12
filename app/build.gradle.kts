@@ -17,7 +17,7 @@ android {
         // installed one → in-place "Update". INTERNAL only, never shown. Signed with the same
         // dedicated Pirate Ship key forever, so updates verify. Never collides with The Cap.
         versionCode = (System.currentTimeMillis() / 60000L).toInt()
-        versionName = "1.1.0"   // human version; bump by hand.
+        versionName = "1.2.0"   // human version; bump by hand.
 
         // Car head units are ARM. 32-bit (armeabi-v7a) is mandatory for genuine KitKat units;
         // arm64 for newer ones. (libVLC 3.x adds its native libs for these at the player step.)

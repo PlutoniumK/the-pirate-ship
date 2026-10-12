@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive-icon foreground: a stylized GOLD PIRATE SHIP, matching The Cap's gold-on-black theme.
+  The art is derived from the phone app's car-card ship SVG (ids psHull/psSail/psMast/psSea in
+  The Cap Android/app/src/main/assets/web/app.js), simplified for launcher sizes. Authored in the
+  original 420x220 coordinate space and scaled into the 108x108 safe zone by the <group>.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:scaleX="0.27"
+        android:scaleY="0.27"
+        android:pivotX="225.5"
+        android:pivotY="109"
+        android:translateX="-171.5"
+        android:translateY="-55">
+
+        <!-- Masts, spars and crow's-nest top: one path, gold left-dark / center-bright gradient. -->
+        <path android:pathData="M148,72 h4 v92 h-4 z M208,42 h5 v122 h-5 z M268,68 h4 v96 h-4 z M120,92 h60 v3.5 h-60 z M128,123 h48 v3.5 h-48 z M176,62 h70 v4 h-70 z M184,103 h56 v4 h-56 z M244,88 h56 v3.5 h-56 z M250,122 h44 v3.5 h-44 z M202,58 h18 v8 h-18 z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="118" android:startY="0" android:endX="362" android:endY="0">
+                    <item android:offset="0" android:color="#FF8A6A2E"/>
+                    <item android:offset="0.5" android:color="#FFE2C072"/>
+                    <item android:offset="1" android:color="#FF7A5A22"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+
+        <!-- Bowsprit. -->
+        <path android:pathData="M300,150 L362,133" android:strokeColor="#FFE2C072" android:strokeWidth="4" android:strokeLineCap="round"/>
+
+        <!-- All billowing sails: one path, warm cream-to-gold radial. -->
+        <path android:pathData="M122,94 C140,103 160,103 178,94 L173,121 C160,128 140,128 127,121 Z M130,125 C144,133 160,133 174,125 L170,149 C160,154 144,154 134,149 Z M178,64 C200,75 222,75 244,64 L238,100 C224,109 198,109 184,100 Z M186,105 C204,114 222,114 238,105 L233,139 C222,146 202,146 191,139 Z M246,90 C260,98 286,98 298,90 L294,117 C282,124 262,124 250,117 Z M252,124 C264,131 282,131 292,124 L289,146 C280,151 264,151 255,146 Z M300,98 L300,150 L352,135 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="radial" android:centerX="205" android:centerY="95" android:gradientRadius="135">
+                    <item android:offset="0" android:color="#FFFFFAF0"/>
+                    <item android:offset="0.55" android:color="#FFF0DCAE"/>
+                    <item android:offset="1" android:color="#FFC9AD76"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+
+        <!-- Pennant flag at the mainmast top (gold, so it reads on the dark background). -->
+        <path android:pathData="M213,42 L213,29 L248,34 L213,42 Z" android:fillColor="#FFE2C072"/>
+
+        <!-- Hull: deep bronze vertical gradient. -->
+        <path android:pathData="M92,164 L300,164 C322,164 338,160 352,149 L358,158 C353,173 338,185 317,189 L120,189 C103,189 91,180 89,165 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="0" android:startY="139" android:endX="0" android:endY="189">
+                    <item android:offset="0" android:color="#FF8A5F2E"/>
+                    <item android:offset="0.5" android:color="#FF5A3C1C"/>
+                    <item android:offset="1" android:color="#FF1E1002"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+
+        <!-- Stern castle. -->
+        <path android:pathData="M89,165 L89,145 C89,141 92,139 97,139 L120,139 C124,139 126,142 126,147 L126,164 Z" android:fillColor="#FF2E1C0B"/>
+
+        <!-- Gold deck gunwale highlight. -->
+        <path android:pathData="M95,163 L320,163 L318,157 L99,157 Z" android:fillColor="#FFE2C072"/>
+    </group>
+</vector>

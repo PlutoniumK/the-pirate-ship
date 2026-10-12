@@ -76,7 +76,7 @@ class MainActivity : Activity() {
         try {
             android.app.AlertDialog.Builder(this)
                 .setTitle("Update available")
-                .setMessage("A newer Pirate Ship" + (if (info.name.isNotBlank()) " (${info.name})" else "") +
+                .setMessage("A newer version of The Cap" + (if (info.name.isNotBlank()) " (${info.name})" else "") +
                         " is ready to install." + (if (info.notes.isNotBlank()) "\n\n${info.notes}" else ""))
                 .setPositiveButton("Install") { _, _ -> Thread { CarUpdater.downloadAndInstall(this, info.apkUrl) }.start() }
                 // "Later" REMEMBERS this version so we don't nag again every launch (no force-push feel).
@@ -192,6 +192,25 @@ class MainActivity : Activity() {
 
     fun onLinkUp() { /* connected — reserved for a status chip */ }
     fun onLinkDown() { /* disconnected — car-bridge.js auto-reconnects the WS */ }
+
+    // ---- update ladder: phone → car (PirateBridge.installUpdate / installFromUrl) ----
+    /**
+     * car_update pushed from the phone. The url points at the phone's /ship_apk, so we pass our
+     * pairing token as the X-Cap-Token header (CarLink.token) so the phone authorizes the pull.
+     * Downloads + installs on a background Thread. (Android still shows the final installer prompt.)
+     */
+    fun onInstallUpdate(json: String) {
+        val url = try { JSONObject(json).optString("url", "") } catch (e: Exception) { "" }
+        if (url.isBlank()) { toast("No update URL"); return }
+        val token = CarLink.token.takeIf { it.isNotBlank() }
+        Thread { CarUpdater.downloadAndInstallFrom(this, url, token) }.start()
+    }
+
+    /** Install from any absolute url (e.g. the dedicated worker's /ship_apk) — no token header. */
+    fun onInstallFromUrl(url: String) {
+        if (url.isBlank()) { toast("No update URL"); return }
+        Thread { CarUpdater.downloadAndInstallFrom(this, url, null) }.start()
+    }
 
     /** 127.0.0.1 stream URLs live on the PHONE; route them through the phone's /media proxy. */
     private fun rewriteLoopback(url: String): String {

@@ -36,4 +36,23 @@ class PirateBridge(private val act: MainActivity) {
     @JavascriptInterface fun onConnected() { act.runOnUiThread { act.onLinkUp() } }
     @JavascriptInterface fun onDisconnected() { act.runOnUiThread { act.onLinkDown() } }
     @JavascriptInterface fun command(event: String, payload: String) { /* reserved for future car_* */ }
+
+    // ---- update ladder (phone → car) --------------------------------------------------------
+    /** This build's versionCode, so the phone-served UI can tell if the car is behind. */
+    @JavascriptInterface
+    fun version(): Int = BuildConfig.VERSION_CODE
+
+    /**
+     * car_update: the phone pushed {url,name,code} (url = the phone's http://<phone>:8099/ship_apk).
+     * Download that APK and launch the installer. Because the url points at the PHONE, we send our
+     * pairing token as the X-Cap-Token header so the phone authorizes the pull (via CarLink.token).
+     * HONEST NOTE: Android ALWAYS shows the system installer prompt for a sideloaded APK — "auto"
+     * means auto-download + auto-launch the installer; the final Install tap is always the user's.
+     */
+    @JavascriptInterface
+    fun installUpdate(json: String) { act.runOnUiThread { act.onInstallUpdate(json) } }
+
+    /** Install from any absolute url (e.g. the dedicated worker's /ship_apk) — no token header. */
+    @JavascriptInterface
+    fun installFromUrl(url: String) { act.runOnUiThread { act.onInstallFromUrl(url) } }
 }
